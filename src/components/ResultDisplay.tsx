@@ -1,0 +1,243 @@
+import React, { useState } from 'react';
+import { Generation, GenerationType } from '../context/AppContext';
+import { Download, ChevronDown, ChevronUp, Play, CheckCircle, XCircle } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import ReactMarkdown from 'react-markdown';
+import { cn } from '../lib/utils';
+
+interface ResultDisplayProps {
+  generation: Generation;
+}
+
+export function ResultDisplay({ generation }: ResultDisplayProps) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  const handleExport = () => {
+    let data = [];
+    let filename = `tubeboard-${generation.type}-${new Date().toISOString()}.xlsx`;
+
+    if (generation.type === 'TRANSCRIPT_ADVANCED') {
+      data = generation.content.segments || [];
+    } else if (generation.type === 'SCENE_DESC') {
+      data = generation.content.scenes || [];
+    } else if (generation.type === 'QUIZ') {
+      data = generation.content.questions || [];
+    } else {
+      data = [{ content: generation.content }];
+    }
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    XLSX.writeFile(wb, filename);
+  };
+
+  return (
+    <div className="bg-card border border-white/5 rounded-2xl overflow-hidden mb-6">
+      <div 
+        className="flex items-center justify-between p-4 bg-white/5 cursor-pointer hover:bg-white/10 transition-colors"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center gap-3">
+          <div className={cn(
+            "p-2 rounded-lg text-white",
+            generation.type.includes('TRANSCRIPT') ? "bg-secondary/20 text-secondary" : "bg-primary/20 text-primary"
+          )}>
+            {generation.type === 'QUIZ' ? 'Quiz' : generation.type === 'SCENE_DESC' ? 'Scenes' : 'Transcript'}
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-white capitalize">
+              {generation.type.replace('_', ' ').toLowerCase()}
+            </h3>
+            <p className="text-xs text-text-muted font-mono">
+              {new Date(generation.createdAt).toLocaleTimeString()} • {generation.model}
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleExport();
+            }}
+            className="p-2 text-text-muted hover:text-white transition-colors"
+            title="Export to Excel"
+          >
+            <Download size={16} />
+          </button>
+          {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </div>
+      </div>
+
+      {isExpanded && (
+        <div className="p-4 border-t border-white/5 bg-bg/50">
+          {renderContent(generation)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function renderContent(generation: Generation) {
+  switch (generation.type) {
+    case 'TRANSCRIPT_SIMPLE':
+    case 'DESC':
+      return (
+        <div className="prose prose-invert max-w-none text-sm text-text-muted">
+          <ReactMarkdown>{typeof generation.content === 'string' ? generation.content : JSON.stringify(generation.content)}</ReactMarkdown>
+        </div>
+      );
+    case 'TRANSCRIPT_ADVANCED':
+      return <TranscriptView segments={generation.content.segments} />;
+    case 'SCENE_DESC':
+      return <SceneView scenes={generation.content.scenes} />;
+    case 'QUIZ':
+      return <QuizView questions={generation.content.questions} />;
+    default:
+      return <pre className="text-xs text-text-muted overflow-auto">{JSON.stringify(generation.content, null, 2)}</pre>;
+  }
+}
+
+function TranscriptView({ segments }: { segments: any[] }) {
+  if (!segments || !Array.isArray(segments)) return <p className="text-red-500">Invalid data format</p>;
+  
+  return (
+    <div className="space-y-4">
+      {segments.map((seg, idx) => (
+        <div key={idx} className="flex gap-4 group hover:bg-white/5 p-2 rounded-xl transition-colors">
+          <div className="w-24 shrink-0 text-xs font-mono text-secondary pt-1">
+            {seg.startTime} - {seg.endTime}
+          </div>
+          <div className="flex-1">
+            <p className="text-sm text-white mb-1">{seg.transcript}</p>
+            <div className="flex gap-2 text-[10px] text-text-muted uppercase tracking-wider">
+              {seg.speakerGender && <span className="bg-white/5 px-1.5 py-0.5 rounded">{seg.speakerGender}</span>}
+              {seg.type && <span className="bg-white/5 px-1.5 py-0.5 rounded">{seg.type}</span>}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SceneView({ scenes }: { scenes: any[] }) {
+  if (!scenes || !Array.isArray(scenes)) return <p className="text-red-500">Invalid data format</p>;
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {scenes.map((scene, idx) => (
+        <div key={idx} className="bg-card border border-white/5 p-4 rounded-2xl hover:border-primary/30 transition-colors">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-xs font-mono text-primary bg-primary/10 px-2 py-1 rounded-lg">
+              {scene.startTime} - {scene.endTime}
+            </span>
+            {scene.mood && <span className="text-[10px] uppercase tracking-wider text-text-muted">{scene.mood}</span>}
+          </div>
+          <p className="text-sm text-white mb-3">{scene.descriptionText}</p>
+          {scene.keyObjects && (
+            <div className="flex flex-wrap gap-1">
+              {scene.keyObjects.map((obj: string, i: number) => (
+                <span key={i} className="text-[10px] bg-white/5 text-text-muted px-1.5 py-0.5 rounded">
+                  {obj}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function QuizView({ questions }: { questions: any[] }) {
+  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [showResults, setShowResults] = useState(false);
+
+  if (!questions || !Array.isArray(questions)) return <p className="text-red-500">Invalid data format</p>;
+
+  const handleSelect = (qId: number, option: string) => {
+    if (showResults) return;
+    setAnswers(prev => ({ ...prev, [qId]: option }));
+  };
+
+  const score = questions.reduce((acc, q) => {
+    return acc + (answers[q.id] === q.correctAnswer ? 1 : 0);
+  }, 0);
+
+  return (
+    <div className="space-y-8">
+      {showResults && (
+        <div className="p-4 bg-secondary/10 border border-secondary/20 rounded-2xl text-center mb-6">
+          <h4 className="text-xl font-bold text-white mb-1">
+            You scored {score} / {questions.length}
+          </h4>
+          <p className="text-sm text-secondary">
+            {score === questions.length ? "Perfect!" : "Keep learning!"}
+          </p>
+        </div>
+      )}
+
+      {questions.map((q) => {
+        const isCorrect = answers[q.id] === q.correctAnswer;
+        const userAnswer = answers[q.id];
+
+        return (
+          <div key={q.id} className="space-y-3">
+            <h4 className="text-base font-medium text-white flex gap-2">
+              <span className="text-text-muted">{q.id}.</span>
+              {q.question}
+            </h4>
+            
+            <div className="grid gap-2 pl-6">
+              {q.options.map((opt: string, i: number) => {
+                let optionClass = "bg-white/5 border-transparent hover:bg-white/10";
+                
+                if (showResults) {
+                  if (opt === q.correctAnswer) optionClass = "bg-green-500/20 border-green-500/50 text-green-200";
+                  else if (opt === userAnswer && opt !== q.correctAnswer) optionClass = "bg-red-500/20 border-red-500/50 text-red-200";
+                  else optionClass = "opacity-50";
+                } else if (userAnswer === opt) {
+                  optionClass = "bg-primary/20 border-primary/50 text-primary";
+                }
+
+                return (
+                  <button
+                    key={i}
+                    onClick={() => handleSelect(q.id, opt)}
+                    className={cn(
+                      "text-left px-4 py-3 rounded-xl border text-sm transition-all",
+                      optionClass
+                    )}
+                    disabled={showResults}
+                  >
+                    {opt}
+                    {showResults && opt === q.correctAnswer && <CheckCircle size={14} className="inline ml-2 text-green-400" />}
+                    {showResults && opt === userAnswer && opt !== q.correctAnswer && <XCircle size={14} className="inline ml-2 text-red-400" />}
+                  </button>
+                );
+              })}
+            </div>
+            
+            {showResults && q.explanation && (
+              <div className="ml-6 p-3 bg-white/5 rounded-xl text-xs text-text-muted italic">
+                💡 {q.explanation}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {!showResults && (
+        <button
+          onClick={() => setShowResults(true)}
+          disabled={Object.keys(answers).length < questions.length}
+          className="w-full py-3 bg-primary text-black font-bold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Submit Answers
+        </button>
+      )}
+    </div>
+  );
+}

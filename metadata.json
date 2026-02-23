@@ -1,0 +1,5 @@
+{
+  "name": "Tubeboard",
+  "description": "An accessible, Gen-Z styled web app for analyzing YouTube videos using Gemini. Features transcription, scene description, quizzes, and chat.",
+  "requestFramePermissions": []
+}
