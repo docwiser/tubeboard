@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Generation, GenerationType } from '../context/AppContext';
-import { Download, ChevronDown, ChevronUp, Play, CheckCircle, XCircle } from 'lucide-react';
+import { Download, ChevronDown, ChevronUp, Play, CheckCircle, XCircle, FileJson, FileSpreadsheet, FileText } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '../lib/utils';
@@ -11,11 +11,13 @@ interface ResultDisplayProps {
 
 export function ResultDisplay({ generation }: ResultDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
-  const handleExport = () => {
-    let data = [];
-    let filename = `tubeboard-${generation.type}-${new Date().toISOString()}.xlsx`;
+  const handleExport = (format: 'json' | 'csv' | 'xlsx') => {
+    let data: any[] = [];
+    let filename = `tubeboard-${generation.type}-${new Date().toISOString()}`;
 
+    // Prepare data based on type
     if (generation.type === 'TRANSCRIPT_ADVANCED') {
       data = generation.content.segments || [];
     } else if (generation.type === 'SCENE_DESC') {
@@ -26,10 +28,25 @@ export function ResultDisplay({ generation }: ResultDisplayProps) {
       data = [{ content: generation.content }];
     }
 
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-    XLSX.writeFile(wb, filename);
+    if (format === 'json') {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${filename}.json`;
+      a.click();
+    } else {
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+      
+      if (format === 'csv') {
+        XLSX.writeFile(wb, `${filename}.csv`, { bookType: 'csv' });
+      } else {
+        XLSX.writeFile(wb, `${filename}.xlsx`);
+      }
+    }
+    setShowExportMenu(false);
   };
 
   return (
@@ -56,16 +73,43 @@ export function ResultDisplay({ generation }: ResultDisplayProps) {
         </div>
         
         <div className="flex items-center gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleExport();
-            }}
-            className="p-2 text-text-muted hover:text-white transition-colors"
-            title="Export to Excel"
-          >
-            <Download size={16} />
-          </button>
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowExportMenu(!showExportMenu);
+              }}
+              className="p-2 text-text-muted hover:text-white transition-colors"
+              title="Export"
+              aria-label="Export options"
+              aria-expanded={showExportMenu}
+            >
+              <Download size={16} />
+            </button>
+            
+            {showExportMenu && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-card border border-white/10 rounded-xl shadow-xl z-20 py-1">
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleExport('json'); }}
+                  className="w-full px-4 py-2 text-left text-sm text-text-muted hover:text-white hover:bg-white/5 flex items-center gap-2"
+                >
+                  <FileJson size={14} /> JSON
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleExport('csv'); }}
+                  className="w-full px-4 py-2 text-left text-sm text-text-muted hover:text-white hover:bg-white/5 flex items-center gap-2"
+                >
+                  <FileText size={14} /> CSV
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleExport('xlsx'); }}
+                  className="w-full px-4 py-2 text-left text-sm text-text-muted hover:text-white hover:bg-white/5 flex items-center gap-2"
+                >
+                  <FileSpreadsheet size={14} /> Excel
+                </button>
+              </div>
+            )}
+          </div>
           {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </div>
       </div>
@@ -190,34 +234,66 @@ function QuizView({ questions }: { questions: any[] }) {
               {q.question}
             </h4>
             
-            <div className="grid gap-2 pl-6">
-              {q.options.map((opt: string, i: number) => {
-                let optionClass = "bg-white/5 border-transparent hover:bg-white/10";
-                
-                if (showResults) {
-                  if (opt === q.correctAnswer) optionClass = "bg-green-500/20 border-green-500/50 text-green-200";
-                  else if (opt === userAnswer && opt !== q.correctAnswer) optionClass = "bg-red-500/20 border-red-500/50 text-red-200";
-                  else optionClass = "opacity-50";
-                } else if (userAnswer === opt) {
-                  optionClass = "bg-primary/20 border-primary/50 text-primary";
-                }
+            <div className="pl-6 space-y-2">
+              {q.questionType === 'short_answer' || q.questionType === 'long_answer' ? (
+                <div className="space-y-2">
+                  {q.questionType === 'long_answer' ? (
+                    <textarea
+                      disabled={showResults}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      placeholder="Type your answer..."
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      disabled={showResults}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      placeholder="Type your answer..."
+                    />
+                  )}
+                  {showResults && (
+                    <div className="text-xs text-green-400">
+                      Correct Answer: {q.correctAnswer}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                // Multiple Choice / Single Choice / True False
+                q.options.map((opt: string, i: number) => {
+                  let optionClass = "border-white/10 hover:bg-white/5";
+                  
+                  if (showResults) {
+                    if (opt === q.correctAnswer) optionClass = "bg-green-500/20 border-green-500/50 text-green-200";
+                    else if (opt === userAnswer && opt !== q.correctAnswer) optionClass = "bg-red-500/20 border-red-500/50 text-red-200";
+                    else optionClass = "opacity-50 border-transparent";
+                  } else if (userAnswer === opt) {
+                    optionClass = "bg-primary/20 border-primary/50 text-primary";
+                  }
 
-                return (
-                  <button
-                    key={i}
-                    onClick={() => handleSelect(q.id, opt)}
-                    className={cn(
-                      "text-left px-4 py-3 rounded-xl border text-sm transition-all",
-                      optionClass
-                    )}
-                    disabled={showResults}
-                  >
-                    {opt}
-                    {showResults && opt === q.correctAnswer && <CheckCircle size={14} className="inline ml-2 text-green-400" />}
-                    {showResults && opt === userAnswer && opt !== q.correctAnswer && <XCircle size={14} className="inline ml-2 text-red-400" />}
-                  </button>
-                );
-              })}
+                  return (
+                    <label
+                      key={i}
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-3 rounded-xl border text-sm transition-all cursor-pointer",
+                        optionClass
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name={`question-${q.id}`}
+                        value={opt}
+                        checked={userAnswer === opt}
+                        onChange={() => handleSelect(q.id, opt)}
+                        disabled={showResults}
+                        className="w-4 h-4 accent-primary"
+                      />
+                      <span className="flex-1">{opt}</span>
+                      {showResults && opt === q.correctAnswer && <CheckCircle size={14} className="text-green-400" />}
+                      {showResults && opt === userAnswer && opt !== q.correctAnswer && <XCircle size={14} className="text-red-400" />}
+                    </label>
+                  );
+                })
+              )}
             </div>
             
             {showResults && q.explanation && (
@@ -232,7 +308,7 @@ function QuizView({ questions }: { questions: any[] }) {
       {!showResults && (
         <button
           onClick={() => setShowResults(true)}
-          disabled={Object.keys(answers).length < questions.length}
+          disabled={Object.keys(answers).length < questions.filter((q: any) => q.questionType !== 'short_answer' && q.questionType !== 'long_answer').length}
           className="w-full py-3 bg-primary text-black font-bold rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Submit Answers

@@ -122,13 +122,12 @@ export class GeminiService {
     }
   }
 
-  async chat(
+  async chatStream(
     model: string,
     history: any[],
     message: string,
     videoUrl: string
   ) {
-    // Construct chat history with the video context at the beginning
     const contents = [
       {
         role: "user",
@@ -156,14 +155,9 @@ export class GeminiService {
       },
     ];
 
-    const response = await this.client.models.generateContent({
+    return await this.client.models.generateContentStream({
       model: model,
       contents: contents,
     });
-
-    return {
-      text: response.text,
-      usage: response.usageMetadata,
-    };
   }
 }
