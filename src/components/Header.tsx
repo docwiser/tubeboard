@@ -1,20 +1,35 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { formatCurrency } from '../lib/utils';
-import { Coins } from 'lucide-react';
+import { formatCurrency, GEMINI_MODELS, MODEL_LABELS } from '../lib/utils';
+import { Coins, ChevronDown } from 'lucide-react';
 
 export function Header() {
-  const { totalCost } = useApp();
+  const { totalCost, selectedModel, setSelectedModel } = useApp();
 
   return (
     <header className="h-16 border-b border-white/5 bg-bg/50 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-30 ml-64">
       <div className="flex items-center gap-4">
-        {/* Breadcrumbs or Title could go here */}
+        {/* Model Selector */}
+        <div className="relative group">
+          <select
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+            className="appearance-none bg-white/5 border border-white/10 text-white text-sm rounded-xl px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer hover:bg-white/10 transition-colors"
+            aria-label="Select Gemini Model"
+          >
+            {Object.values(GEMINI_MODELS).map((model) => (
+              <option key={model} value={model} className="bg-card text-white">
+                {MODEL_LABELS[model] || model}
+              </option>
+            ))}
+          </select>
+          <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" aria-hidden="true" />
+        </div>
       </div>
 
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/5">
-          <Coins size={14} className="text-primary" />
+          <Coins size={14} className="text-primary" aria-hidden="true" />
           <span className="text-xs font-mono text-text-muted">
             Usage: <span className="text-white font-bold">{formatCurrency(totalCost)}</span>
           </span>

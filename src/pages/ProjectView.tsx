@@ -44,8 +44,12 @@ export function ProjectView() {
             )}
           </div>
 
-          <div className="flex items-center gap-4 border-b border-white/10 pb-4 shrink-0">
+          <div className="flex items-center gap-4 border-b border-white/10 pb-4 shrink-0" role="tablist" aria-label="Project Tools">
             <button
+              role="tab"
+              aria-selected={activeTab === 'generate'}
+              aria-controls="panel-generate"
+              id="tab-generate"
               onClick={() => setActiveTab('generate')}
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all",
@@ -54,10 +58,14 @@ export function ProjectView() {
                   : "text-text-muted hover:text-white hover:bg-white/5"
               )}
             >
-              <Zap size={18} />
+              <Zap size={18} aria-hidden="true" />
               Generate
             </button>
             <button
+              role="tab"
+              aria-selected={activeTab === 'chat'}
+              aria-controls="panel-chat"
+              id="tab-chat"
               onClick={() => setActiveTab('chat')}
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all",
@@ -66,17 +74,30 @@ export function ProjectView() {
                   : "text-text-muted hover:text-white hover:bg-white/5"
               )}
             >
-              <MessageSquare size={18} />
+              <MessageSquare size={18} aria-hidden="true" />
               Chat
             </button>
           </div>
 
           <div className="flex-1 min-h-0 overflow-y-auto pr-2">
-            {activeTab === 'generate' ? (
-              <GeneratorInterface projectId={project.id} videoUrl={project.videoUrl} />
-            ) : (
-              <ChatInterface projectId={project.id} videoUrl={project.videoUrl} />
-            )}
+            <div
+              role="tabpanel"
+              id="panel-generate"
+              aria-labelledby="tab-generate"
+              hidden={activeTab !== 'generate'}
+              className="h-full"
+            >
+              {activeTab === 'generate' && <GeneratorInterface projectId={project.id} videoUrl={project.videoUrl} />}
+            </div>
+            <div
+              role="tabpanel"
+              id="panel-chat"
+              aria-labelledby="tab-chat"
+              hidden={activeTab !== 'chat'}
+              className="h-full"
+            >
+              {activeTab === 'chat' && <ChatInterface projectId={project.id} videoUrl={project.videoUrl} />}
+            </div>
           </div>
         </div>
 

@@ -51,14 +51,18 @@ interface AppContextType {
   addChatMessage: (projectId: string, message: ChatMessage) => void;
   costHistory: CostEntry[];
   totalCost: number;
+  selectedModel: string;
+  setSelectedModel: (model: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [apiKey, setApiKeyState] = useState<string | null>(() => {
-    return localStorage.getItem('tubeboard_api_key') || null;
+    return import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('tubeboard_api_key') || null;
   });
+
+  const [selectedModel, setSelectedModel] = useState<string>(GEMINI_MODELS.FLASH_2_5);
 
   const [projects, setProjects] = useState<Project[]>(() => {
     const stored = localStorage.getItem('tubeboard_projects');
@@ -162,6 +166,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         addChatMessage,
         costHistory,
         totalCost,
+        selectedModel,
+        setSelectedModel,
       }}
     >
       {children}

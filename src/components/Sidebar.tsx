@@ -81,9 +81,9 @@ export function Sidebar() {
                       if (confirm('Delete this project?')) deleteProject(project.id);
                     }}
                     className="absolute right-2 opacity-0 group-hover:opacity-100 p-1.5 text-text-muted hover:text-red-500 transition-all"
-                    aria-label="Delete project"
+                    aria-label={`Delete project ${project.name}`}
                   >
-                    <Trash2 size={14} />
+                    <Trash2 size={14} aria-hidden="true" />
                   </button>
                 </div>
               ))
@@ -93,15 +93,7 @@ export function Sidebar() {
       </div>
 
       <div className="p-4 border-t border-white/5">
-        <div className="flex items-center gap-3 px-3 py-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-xs font-bold text-black">
-            U
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">User</p>
-            <p className="text-xs text-text-muted truncate">Free Plan</p>
-          </div>
-        </div>
+        {/* User badge removed as requested */}
       </div>
     </aside>
   );
