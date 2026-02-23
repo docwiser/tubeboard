@@ -1,15 +1,19 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { formatCurrency, formatDateTime } from '../lib/utils';
+import { formatCurrency, formatDateTime, formatDualCurrency } from '../lib/utils';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 export function CostPage() {
-  const { costHistory, totalCost } = useApp();
+  const { costHistory, totalCost, exchangeRate } = useApp();
 
   const handleExport = () => {
-    const ws = XLSX.utils.json_to_sheet(costHistory);
+    const ws = XLSX.utils.json_to_sheet(costHistory.map(entry => ({
+      ...entry,
+      costUSD: entry.cost,
+      costINR: entry.cost * exchangeRate
+    })));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Cost History");
     XLSX.writeFile(wb, `tubeboard-cost-history-${new Date().toISOString()}.xlsx`);
@@ -45,7 +49,7 @@ export function CostPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-card border border-white/5 p-6 rounded-2xl">
           <h3 className="text-sm font-medium text-text-muted mb-2">Total Cost</h3>
-          <p className="text-4xl font-bold text-primary">{formatCurrency(totalCost)}</p>
+          <p className="text-4xl font-bold text-primary">{formatDualCurrency(totalCost, exchangeRate)}</p>
         </div>
         <div className="bg-card border border-white/5 p-6 rounded-2xl">
           <h3 className="text-sm font-medium text-text-muted mb-2">Total Requests</h3>
@@ -67,7 +71,7 @@ export function CostPage() {
               <Tooltip 
                 contentStyle={{ backgroundColor: '#18181b', borderColor: '#333', borderRadius: '8px' }}
                 itemStyle={{ color: '#fff' }}
-                formatter={(val: number) => [formatCurrency(val), 'Cost']}
+                formatter={(val: number) => [formatDualCurrency(val, exchangeRate), 'Cost']}
               />
               <Bar dataKey="cost" radius={[4, 4, 0, 0]}>
                 {chartData.map((entry, index) => (
@@ -117,7 +121,7 @@ export function CostPage() {
                     {entry.tokens.output.toLocaleString()}
                   </td>
                   <td className="px-6 py-4 text-right font-bold text-white font-mono">
-                    {formatCurrency(entry.cost)}
+                    {formatDualCurrency(entry.cost, exchangeRate)}
                   </td>
                 </tr>
               ))}

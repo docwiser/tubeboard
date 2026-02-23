@@ -25,6 +25,17 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+export function formatDualCurrency(amountUSD: number, exchangeRate: number): string {
+  const usd = formatCurrency(amountUSD);
+  const inr = new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amountUSD * exchangeRate);
+  return `${usd} (${inr})`;
+}
+
 export const GEMINI_MODELS = {
   FLASH_2_5: "gemini-2.5-flash",
   FLASH_LITE_2_5: "gemini-2.5-flash-lite-preview-02-05",

@@ -53,6 +53,8 @@ interface AppContextType {
   totalCost: number;
   selectedModel: string;
   setSelectedModel: (model: string) => void;
+  exchangeRate: number;
+  setExchangeRate: (rate: number) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -63,6 +65,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [selectedModel, setSelectedModel] = useState<string>(GEMINI_MODELS.FLASH_2_5);
+  const [exchangeRate, setExchangeRate] = useState<number>(90.99);
 
   const [projects, setProjects] = useState<Project[]>(() => {
     const stored = localStorage.getItem('tubeboard_projects');
@@ -168,6 +171,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         totalCost,
         selectedModel,
         setSelectedModel,
+        exchangeRate,
+        setExchangeRate,
       }}
     >
       {children}

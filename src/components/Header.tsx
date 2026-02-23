@@ -1,10 +1,10 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { formatCurrency, GEMINI_MODELS, MODEL_LABELS } from '../lib/utils';
-import { Coins, ChevronDown } from 'lucide-react';
+import { formatDualCurrency, GEMINI_MODELS, MODEL_LABELS } from '../lib/utils';
+import { Coins, ChevronDown, DollarSign } from 'lucide-react';
 
 export function Header() {
-  const { totalCost, selectedModel, setSelectedModel } = useApp();
+  const { totalCost, selectedModel, setSelectedModel, exchangeRate, setExchangeRate } = useApp();
 
   return (
     <header className="h-16 border-b border-white/5 bg-bg/50 backdrop-blur-md flex items-center justify-between px-8 sticky top-0 z-30 ml-64">
@@ -19,11 +19,26 @@ export function Header() {
           >
             {Object.values(GEMINI_MODELS).map((model) => (
               <option key={model} value={model} className="bg-card text-white">
-                {MODEL_LABELS[model] || model}
+                {Object.entries(MODEL_LABELS).find(([k, v]) => k === model)?.[1] || model}
               </option>
             ))}
           </select>
           <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" aria-hidden="true" />
+        </div>
+
+        {/* Exchange Rate Spinbox */}
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-xl border border-white/5" title="USD to INR Exchange Rate">
+          <DollarSign size={14} className="text-green-400" aria-hidden="true" />
+          <span className="text-xs text-text-muted">1 USD = ₹</span>
+          <input
+            type="number"
+            value={exchangeRate}
+            onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 0)}
+            step="0.01"
+            min="0"
+            className="w-16 bg-transparent text-xs font-mono text-white focus:outline-none text-right"
+            aria-label="Exchange Rate (USD to INR)"
+          />
         </div>
       </div>
 
@@ -31,7 +46,7 @@ export function Header() {
         <div className="flex items-center gap-2 px-3 py-1.5 bg-white/5 rounded-full border border-white/5">
           <Coins size={14} className="text-primary" aria-hidden="true" />
           <span className="text-xs font-mono text-text-muted">
-            Usage: <span className="text-white font-bold">{formatCurrency(totalCost)}</span>
+            Usage: <span className="text-white font-bold">{formatDualCurrency(totalCost, exchangeRate)}</span>
           </span>
         </div>
 
