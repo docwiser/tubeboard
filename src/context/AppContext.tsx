@@ -57,6 +57,9 @@ interface AppContextType {
   setExchangeRate: (rate: number) => void;
   ttsSettings: TTSSettings;
   setTtsSettings: (settings: TTSSettings) => void;
+  isCreateModalOpen: boolean;
+  openCreateModal: () => void;
+  closeCreateModal: () => void;
 }
 
 export interface TTSSettings {
@@ -93,6 +96,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     if (apiKey) localStorage.setItem('tubeboard_api_key', apiKey);
@@ -190,6 +194,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setExchangeRate,
         ttsSettings,
         setTtsSettings,
+        isCreateModalOpen,
+        openCreateModal: () => setIsCreateModalOpen(true),
+        closeCreateModal: () => setIsCreateModalOpen(false),
       }}
     >
       {children}

@@ -22,7 +22,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     exchangeRate,
     setExchangeRate,
     ttsSettings,
-    setTtsSettings
+    setTtsSettings,
+    openCreateModal
   } = useApp();
   
   const navigate = useNavigate();
@@ -109,11 +110,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider">Projects</h3>
               <button 
                 onClick={() => {
-                  const url = prompt("Enter YouTube URL:");
-                  if (url) {
-                    const name = prompt("Enter Project Name:") || "Untitled Project";
-                    createProject(name, url);
-                  }
+                  handleClose();
+                  openCreateModal();
                 }}
                 className="p-1 text-primary hover:bg-primary/10 rounded transition-colors"
                 aria-label="New Project"

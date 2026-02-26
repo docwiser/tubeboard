@@ -1,19 +1,15 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { CreateProjectModal } from '../components/CreateProjectModal';
 import { Plus, Folder, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { formatDateTime } from '../lib/utils';
 import { motion } from 'motion/react';
 
 export function Home() {
-  const { projects } = useApp();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { projects, openCreateModal } = useApp();
 
   return (
     <div className="max-w-5xl mx-auto">
-      <CreateProjectModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-      
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -28,7 +24,7 @@ export function Home() {
         
         <div className="pt-8">
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={openCreateModal}
             className="inline-flex items-center gap-3 px-8 py-4 bg-primary text-black font-bold rounded-2xl hover:bg-primary/90 transition-all transform hover:scale-105 shadow-lg shadow-primary/20"
           >
             <Plus size={24} />

@@ -2,24 +2,19 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { X, Youtube, Plus } from 'lucide-react';
 
-interface CreateProjectModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps) {
-  const { createProject } = useApp();
+export function CreateProjectModal() {
+  const { createProject, isCreateModalOpen, closeCreateModal } = useApp();
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isCreateModalOpen) {
       dialogRef.current?.showModal();
     } else {
       dialogRef.current?.close();
     }
-  }, [isOpen]);
+  }, [isCreateModalOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,12 +22,12 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
       createProject(name, url);
       setName('');
       setUrl('');
-      onClose();
+      closeCreateModal();
     }
   };
 
   const handleClose = () => {
-    onClose();
+    closeCreateModal();
   };
 
   return (
@@ -43,7 +38,7 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
     >
       <div className="w-full max-w-md rounded-2xl bg-card p-6 border border-white/10 shadow-2xl relative text-left">
         <button 
-          onClick={onClose}
+          onClick={handleClose}
           className="absolute top-4 right-4 text-text-muted hover:text-white transition-colors"
           aria-label="Close modal"
         >
