@@ -20,6 +20,7 @@ export function ProjectView() {
   const [showMenu, setShowMenu] = useState(false);
   const playerRef = useRef<YouTubePlayer | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [lastPlayedSceneIndex, setLastPlayedSceneIndex] = useState<number>(-1);
 
   // Scene Description TTS Logic
   useEffect(() => {
@@ -32,30 +33,30 @@ export function ProjectView() {
       
       // Find active scene description
       const sceneGen = project.generations.find(g => g.type === 'SCENE_DESC');
-      if (sceneGen && Array.isArray(sceneGen.content)) {
-        const currentScene = sceneGen.content.find((scene: any) => {
-          // Assuming scene has startTime/timestamp in seconds or "MM:SS"
-          // We need to parse it. Let's assume content structure from prompt.
-          // If prompt asks for JSON with startTime, we parse it.
-          // For now, let's assume the content has a 'timestamp' field which is a string "MM:SS" or number
-          
+      if (sceneGen && sceneGen.content && Array.isArray(sceneGen.content.scenes)) {
+        const currentSceneIndex = sceneGen.content.scenes.findIndex((scene: any) => {
           let sceneTime = -1;
-          if (typeof scene.timestamp === 'string') {
-             const parts = scene.timestamp.split(':').map(Number);
+          if (typeof scene.startTime === 'string') {
+             const parts = scene.startTime.split(':').map(Number);
              if (parts.length === 2) sceneTime = parts[0] * 60 + parts[1];
              else if (parts.length === 3) sceneTime = parts[0] * 3600 + parts[1] * 60 + parts[2];
-          } else if (typeof scene.timestamp === 'number') {
-            sceneTime = scene.timestamp;
+          } else if (typeof scene.startTime === 'number') {
+            sceneTime = scene.startTime;
           }
 
-          // Check if we just hit this timestamp (within 1s margin)
-          // We need a state to track played scenes to avoid loop, but for now simple check
+          // Trigger if within 1 second range
           return Math.abs(currentTime - sceneTime) < 1;
         });
 
-        if (currentScene && !window.speechSynthesis.speaking) {
+        if (currentSceneIndex !== -1 && currentSceneIndex !== lastPlayedSceneIndex && !window.speechSynthesis.speaking) {
+           const currentScene = sceneGen.content.scenes[currentSceneIndex];
+           
+           // Pause video immediately
            playerRef.current.pauseVideo();
-           const utterance = new SpeechSynthesisUtterance(currentScene.description || currentScene.text);
+           setIsPlaying(false); // Update local state immediately
+           setLastPlayedSceneIndex(currentSceneIndex);
+
+           const utterance = new SpeechSynthesisUtterance(currentScene.descriptionText || currentScene.description);
            if (ttsSettings.voiceURI) {
              const voice = window.speechSynthesis.getVoices().find(v => v.voiceURI === ttsSettings.voiceURI);
              if (voice) utterance.voice = voice;
@@ -65,16 +66,19 @@ export function ProjectView() {
            utterance.volume = ttsSettings.volume;
            
            utterance.onend = () => {
-             playerRef.current.playVideo();
+             if (playerRef.current) {
+               playerRef.current.playVideo();
+               setIsPlaying(true);
+             }
            };
            
            window.speechSynthesis.speak(utterance);
         }
       }
-    }, 1000);
+    }, 500); // Check more frequently
 
     return () => clearInterval(checkTime);
-  }, [project, isPlaying, ttsSettings]);
+  }, [project, isPlaying, ttsSettings, lastPlayedSceneIndex]);
 
   if (!project) {
     return <Navigate to="/" />;
