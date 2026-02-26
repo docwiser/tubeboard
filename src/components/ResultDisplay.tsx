@@ -25,6 +25,8 @@ export function ResultDisplay({ generation, onSeek }: ResultDisplayProps) {
       data = generation.content.scenes || [];
     } else if (generation.type === 'QUIZ') {
       data = generation.content.questions || [];
+    } else if (generation.type === 'FLASHCARDS') {
+      data = generation.content.flashcards || [];
     } else {
       data = [{ content: generation.content }];
     }
@@ -139,9 +141,55 @@ function renderContent(generation: Generation, onSeek?: (time: number) => void) 
       return <SceneView scenes={generation.content.scenes} onSeek={onSeek} />;
     case 'QUIZ':
       return <QuizView questions={generation.content.questions} />;
+    case 'FLASHCARDS':
+      return <FlashcardView flashcards={generation.content.flashcards} />;
     default:
       return <pre className="text-xs text-text-muted overflow-auto">{JSON.stringify(generation.content, null, 2)}</pre>;
   }
+}
+
+function FlashcardView({ flashcards }: { flashcards: any[] }) {
+  const [flipped, setFlipped] = useState<Record<number, boolean>>({});
+
+  if (!flashcards || !Array.isArray(flashcards)) return <p className="text-red-500">Invalid data format</p>;
+
+  const toggleFlip = (idx: number) => {
+    setFlipped(prev => ({ ...prev, [idx]: !prev[idx] }));
+  };
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {flashcards.map((card, idx) => (
+        <div
+          key={idx}
+          className="relative h-64 cursor-pointer group [perspective:1000px]"
+          onClick={() => toggleFlip(idx)}
+        >
+          <div className={cn(
+            "w-full h-full transition-all duration-500 [transform-style:preserve-3d] relative",
+            flipped[idx] ? "[transform:rotateY(180deg)]" : ""
+          )}>
+            {/* Front */}
+            <div className="absolute inset-0 [backface-visibility:hidden] bg-card border border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:border-primary/30 transition-colors shadow-lg">
+              <span className="text-xs text-text-muted uppercase tracking-wider mb-4 font-bold">Question</span>
+              <p className="text-white font-medium text-lg">{card.front}</p>
+              {card.tag && (
+                <span className="absolute bottom-4 text-[10px] bg-white/5 px-2 py-1 rounded text-text-muted border border-white/5">
+                  {card.tag}
+                </span>
+              )}
+            </div>
+
+            {/* Back */}
+            <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)] bg-primary/10 border border-primary/20 rounded-2xl p-6 flex flex-col items-center justify-center text-center shadow-lg">
+              <span className="text-xs text-primary uppercase tracking-wider mb-4 font-bold">Answer</span>
+              <p className="text-white text-lg">{card.back}</p>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function TranscriptView({ segments, onSeek }: { segments: any[]; onSeek?: (time: number) => void }) {

@@ -65,6 +65,24 @@ export const SCHEMAS = {
       },
     },
   },
+
+  FLASHCARDS: {
+    type: Type.OBJECT,
+    properties: {
+      flashcards: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            front: { type: Type.STRING, description: "The question or concept on the front of the card" },
+            back: { type: Type.STRING, description: "The answer or definition on the back of the card" },
+            tag: { type: Type.STRING, description: "Category or topic tag" },
+          },
+          required: ["front", "back"],
+        },
+      },
+    },
+  },
 };
 
 export class GeminiService {

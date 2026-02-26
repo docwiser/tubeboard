@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { calculateCost, GEMINI_MODELS } from '../lib/utils';
 
-export type GenerationType = 'TRANSCRIPT_SIMPLE' | 'TRANSCRIPT_ADVANCED' | 'SCENE_DESC' | 'QUIZ' | 'DESC';
+export type GenerationType = 'TRANSCRIPT_SIMPLE' | 'TRANSCRIPT_ADVANCED' | 'SCENE_DESC' | 'QUIZ' | 'DESC' | 'FLASHCARDS';
 
 export interface Generation {
   id: string;

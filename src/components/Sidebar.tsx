@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp, TTSSettings } from '../context/AppContext';
 import { GEMINI_MODELS, MODEL_LABELS } from '../lib/utils';
 import { X, Settings, Home, DollarSign, Volume2, Mic, Plus, Trash2, FolderOpen } from 'lucide-react';
@@ -26,8 +26,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   } = useApp();
   
   const navigate = useNavigate();
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
     const loadVoices = () => {
@@ -43,34 +43,38 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     };
   }, []);
 
-  const handleProjectClick = (project: any) => {
-    setCurrentProject(project);
-    navigate(`/project/${project.id}`);
+  useEffect(() => {
+    if (isOpen) {
+      dialogRef.current?.showModal();
+    } else {
+      dialogRef.current?.close();
+    }
+  }, [isOpen]);
+
+  const handleClose = () => {
+    dialogRef.current?.close();
     onClose();
   };
 
-  return (
-    <>
-      {/* Backdrop */}
-      {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity"
-          onClick={onClose}
-          aria-hidden="true"
-        />
-      )}
+  const handleProjectClick = (project: any) => {
+    setCurrentProject(project);
+    navigate(`/project/${project.id}`);
+    handleClose();
+  };
 
-      {/* Sidebar Panel */}
-      <div className={cn(
-        "fixed inset-y-0 left-0 w-80 bg-card border-r border-white/10 z-50 transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl",
-        isOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
+  return (
+    <dialog
+      ref={dialogRef}
+      onClose={handleClose}
+      className="backdrop:bg-black/50 backdrop:backdrop-blur-sm bg-transparent p-0 m-0 h-full max-h-full w-auto open:animate-in open:slide-in-from-left duration-300"
+    >
+      <div className="h-full w-80 bg-card border-r border-white/10 flex flex-col shadow-2xl">
         <div className="p-4 border-b border-white/10 flex items-center justify-between">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <span className="text-primary">Tube</span>board
           </h2>
           <button 
-            onClick={onClose}
+            onClick={handleClose}
             className="p-2 text-text-muted hover:text-white transition-colors"
             aria-label="Close Sidebar"
           >
@@ -83,7 +87,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <nav className="space-y-2">
             <Link 
               to="/" 
-              onClick={onClose}
+              onClick={handleClose}
               className="flex items-center gap-3 px-4 py-3 rounded-xl text-text-muted hover:text-white hover:bg-white/5 transition-colors"
             >
               <Home size={18} aria-hidden="true" />
@@ -91,7 +95,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </Link>
             <Link 
               to="/costs" 
-              onClick={onClose}
+              onClick={handleClose}
               className="flex items-center gap-3 px-4 py-3 rounded-xl text-text-muted hover:text-white hover:bg-white/5 transition-colors"
             >
               <DollarSign size={18} aria-hidden="true" />
@@ -105,14 +109,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider">Projects</h3>
               <button 
                 onClick={() => {
-                  // Trigger create modal logic (needs to be lifted or handled via context/global event)
-                  // For now, we might need to pass a prop or use a global modal manager
-                  // But since CreateProjectModal is in Layout, we can't easily trigger it from here without prop drilling
-                  // Let's assume we can navigate to home and open it, or just use a simple prompt for now
-                  // Actually, the user asked for the sidebar to be a modal dialog.
-                  // Let's just use a simple prompt here or navigate to home?
-                  // The original app had a create button in sidebar.
-                  // We'll reimplement a simple create flow here or emit an event.
                   const url = prompt("Enter YouTube URL:");
                   if (url) {
                     const name = prompt("Enter Project Name:") || "Untitled Project";
@@ -242,6 +238,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
         </div>
       </div>
-    </>
+    </dialog>
   );
 }

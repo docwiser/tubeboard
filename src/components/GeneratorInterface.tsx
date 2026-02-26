@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp, GenerationType } from '../context/AppContext';
 import { GeminiService, SCHEMAS } from '../lib/gemini';
-import { Loader2, FileText, Clapperboard, BrainCircuit, ListVideo, Settings, X, Play } from 'lucide-react';
+import { Loader2, FileText, Clapperboard, BrainCircuit, ListVideo, Settings, X, Play, StickyNote } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface GeneratorInterfaceProps {
@@ -76,6 +76,10 @@ export function GeneratorInterface({ projectId, videoUrl, onSeek }: { projectId:
         case 'QUIZ':
           prompt = `Create a comprehensive quiz based on the video content. Generate ${params.numQuestions} questions. Difficulty: ${params.difficulty}. Include multiple choice, short answer, and true/false questions.`;
           schema = SCHEMAS.QUIZ;
+          break;
+        case 'FLASHCARDS':
+          prompt = `Create ${params.numQuestions} flashcards based on the key concepts of the video. Each card should have a 'front' (question/concept) and 'back' (answer/definition).`;
+          schema = SCHEMAS.FLASHCARDS;
           break;
         case 'DESC':
           prompt = "Provide a detailed description and summary of this video.";
@@ -166,6 +170,14 @@ export function GeneratorInterface({ projectId, videoUrl, onSeek }: { projectId:
           onClick={() => openModal('QUIZ')}
           disabled={!!isGenerating}
           color="secondary"
+        />
+        <GeneratorButton
+          icon={<StickyNote size={24} aria-hidden="true" />}
+          label="Flashcards"
+          subLabel="Study key concepts"
+          onClick={() => openModal('FLASHCARDS')}
+          disabled={!!isGenerating}
+          color="primary"
         />
       </div>
 
@@ -266,6 +278,22 @@ export function GeneratorInterface({ projectId, videoUrl, onSeek }: { projectId:
                   />
                   <p className="text-xs text-text-muted mt-1">Generate description every {params.interval} seconds.</p>
                 </div>
+              </div>
+            )}
+
+            {activeModal === 'FLASHCARDS' && (
+              <div>
+                <label className="block text-sm font-medium text-text-muted mb-2">Number of Cards</label>
+                <input
+                  type="range"
+                  min="5"
+                  max="30"
+                  step="5"
+                  value={params.numQuestions}
+                  onChange={(e) => setParams({ ...params, numQuestions: parseInt(e.target.value) })}
+                  className="w-full accent-primary"
+                />
+                <div className="text-right text-xs text-white font-mono mt-1">{params.numQuestions} Cards</div>
               </div>
             )}
 
