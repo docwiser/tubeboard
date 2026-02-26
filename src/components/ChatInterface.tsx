@@ -8,9 +8,10 @@ import { cn } from '../lib/utils';
 interface ChatInterfaceProps {
   projectId: string;
   videoUrl: string;
+  onSeek?: (time: number) => void;
 }
 
-export function ChatInterface({ projectId, videoUrl }: ChatInterfaceProps) {
+export function ChatInterface({ projectId, videoUrl, onSeek }: ChatInterfaceProps) {
   const { projects, addChatMessage, apiKey, selectedModel } = useApp();
   const project = projects.find((p) => p.id === projectId);
   const [input, setInput] = useState('');
@@ -25,6 +26,21 @@ export function ChatInterface({ projectId, videoUrl }: ChatInterfaceProps) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [history, streamingText]);
+
+  // Function to handle timestamp clicks in markdown
+  const handleTimestampClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'A' && target.textContent?.match(/\d{1,2}:\d{2}/)) {
+      e.preventDefault();
+      const timeStr = target.textContent;
+      const parts = timeStr.split(':').map(Number);
+      let seconds = 0;
+      if (parts.length === 2) seconds = parts[0] * 60 + parts[1];
+      else if (parts.length === 3) seconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+      
+      onSeek?.(seconds);
+    }
+  };
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,7 +106,13 @@ export function ChatInterface({ projectId, videoUrl }: ChatInterfaceProps) {
 
   return (
     <div className="flex flex-col h-[600px] bg-card rounded-2xl border border-white/5 overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-4 space-y-6" ref={scrollRef} role="log" aria-live="polite">
+      <div 
+        className="flex-1 overflow-y-auto p-4 space-y-6" 
+        ref={scrollRef} 
+        role="log" 
+        aria-live="polite"
+        onClick={handleTimestampClick}
+      >
         {history.length === 0 && (
           <div className="text-center text-text-muted py-10">
             <p>Ask anything about the video!</p>

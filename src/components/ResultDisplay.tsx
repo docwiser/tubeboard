@@ -7,9 +7,10 @@ import { cn } from '../lib/utils';
 
 interface ResultDisplayProps {
   generation: Generation;
+  onSeek?: (time: number) => void;
 }
 
-export function ResultDisplay({ generation }: ResultDisplayProps) {
+export function ResultDisplay({ generation, onSeek }: ResultDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [showExportMenu, setShowExportMenu] = useState(false);
 
@@ -116,14 +117,14 @@ export function ResultDisplay({ generation }: ResultDisplayProps) {
 
       {isExpanded && (
         <div className="p-4 border-t border-white/5 bg-bg/50">
-          {renderContent(generation)}
+          {renderContent(generation, onSeek)}
         </div>
       )}
     </div>
   );
 }
 
-function renderContent(generation: Generation) {
+function renderContent(generation: Generation, onSeek?: (time: number) => void) {
   switch (generation.type) {
     case 'TRANSCRIPT_SIMPLE':
     case 'DESC':
@@ -133,9 +134,9 @@ function renderContent(generation: Generation) {
         </div>
       );
     case 'TRANSCRIPT_ADVANCED':
-      return <TranscriptView segments={generation.content.segments} />;
+      return <TranscriptView segments={generation.content.segments} onSeek={onSeek} />;
     case 'SCENE_DESC':
-      return <SceneView scenes={generation.content.scenes} />;
+      return <SceneView scenes={generation.content.scenes} onSeek={onSeek} />;
     case 'QUIZ':
       return <QuizView questions={generation.content.questions} />;
     default:
@@ -143,14 +144,25 @@ function renderContent(generation: Generation) {
   }
 }
 
-function TranscriptView({ segments }: { segments: any[] }) {
+function TranscriptView({ segments, onSeek }: { segments: any[]; onSeek?: (time: number) => void }) {
   if (!segments || !Array.isArray(segments)) return <p className="text-red-500">Invalid data format</p>;
   
+  const parseTime = (timeStr: string) => {
+    const parts = timeStr.split(':').map(Number);
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    return 0;
+  };
+
   return (
     <div className="space-y-4">
       {segments.map((seg, idx) => (
-        <div key={idx} className="flex gap-4 group hover:bg-white/5 p-2 rounded-xl transition-colors">
-          <div className="w-24 shrink-0 text-xs font-mono text-secondary pt-1">
+        <div 
+          key={idx} 
+          className="flex gap-4 group hover:bg-white/5 p-2 rounded-xl transition-colors cursor-pointer"
+          onClick={() => onSeek?.(parseTime(seg.startTime))}
+        >
+          <div className="w-24 shrink-0 text-xs font-mono text-secondary pt-1 group-hover:text-primary transition-colors">
             {seg.startTime} - {seg.endTime}
           </div>
           <div className="flex-1">
@@ -166,15 +178,26 @@ function TranscriptView({ segments }: { segments: any[] }) {
   );
 }
 
-function SceneView({ scenes }: { scenes: any[] }) {
+function SceneView({ scenes, onSeek }: { scenes: any[]; onSeek?: (time: number) => void }) {
   if (!scenes || !Array.isArray(scenes)) return <p className="text-red-500">Invalid data format</p>;
+
+  const parseTime = (timeStr: string) => {
+    const parts = timeStr.split(':').map(Number);
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    return 0;
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {scenes.map((scene, idx) => (
-        <div key={idx} className="bg-card border border-white/5 p-4 rounded-2xl hover:border-primary/30 transition-colors">
+        <div 
+          key={idx} 
+          className="bg-card border border-white/5 p-4 rounded-2xl hover:border-primary/30 transition-colors cursor-pointer group"
+          onClick={() => onSeek?.(parseTime(scene.startTime))}
+        >
           <div className="flex justify-between items-start mb-2">
-            <span className="text-xs font-mono text-primary bg-primary/10 px-2 py-1 rounded-lg">
+            <span className="text-xs font-mono text-primary bg-primary/10 px-2 py-1 rounded-lg group-hover:bg-primary group-hover:text-black transition-colors">
               {scene.startTime} - {scene.endTime}
             </span>
             {scene.mood && <span className="text-[10px] uppercase tracking-wider text-text-muted">{scene.mood}</span>}

@@ -1,100 +1,247 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { useApp } from '../context/AppContext';
-import { Home, Folder, Trash2, PlusCircle, DollarSign } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useApp, TTSSettings } from '../context/AppContext';
+import { GEMINI_MODELS, MODEL_LABELS } from '../lib/utils';
+import { X, Settings, Home, DollarSign, Volume2, Mic, Plus, Trash2, FolderOpen } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 
-export function Sidebar() {
-  const { projects, deleteProject, currentProject, setCurrentProject } = useApp();
-  const location = useLocation();
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const { 
+    projects, 
+    createProject, 
+    deleteProject, 
+    currentProject, 
+    setCurrentProject,
+    selectedModel,
+    setSelectedModel,
+    exchangeRate,
+    setExchangeRate,
+    ttsSettings,
+    setTtsSettings
+  } = useApp();
+  
+  const navigate = useNavigate();
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  useEffect(() => {
+    const loadVoices = () => {
+      const availableVoices = window.speechSynthesis.getVoices();
+      setVoices(availableVoices);
+    };
+    
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    
+    return () => {
+      window.speechSynthesis.onvoiceschanged = null;
+    };
+  }, []);
+
+  const handleProjectClick = (project: any) => {
+    setCurrentProject(project);
+    navigate(`/project/${project.id}`);
+    onClose();
+  };
 
   return (
-    <aside className="w-64 h-screen bg-card border-r border-white/5 flex flex-col fixed left-0 top-0 z-40">
-      <div className="p-6 border-b border-white/5">
-        <Link to="/" className="flex items-center gap-2 text-primary font-bold text-2xl tracking-tighter">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-black">
-            <span className="text-xl">T</span>
-          </div>
-          Tubeboard
-        </Link>
-      </div>
+    <>
+      {/* Backdrop */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        <div>
-          <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3 px-2">Menu</h3>
-          <nav className="space-y-1">
-            <Link
-              to="/"
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors",
-                location.pathname === "/" ? "bg-white/10 text-white" : "text-text-muted hover:text-white hover:bg-white/5"
-              )}
-            >
-              <Home size={18} />
-              Home
-            </Link>
-            <Link
-              to="/cost"
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors",
-                location.pathname === "/cost" ? "bg-white/10 text-white" : "text-text-muted hover:text-white hover:bg-white/5"
-              )}
-            >
-              <DollarSign size={18} />
-              Cost Breakdown
-            </Link>
-          </nav>
+      {/* Sidebar Panel */}
+      <div className={cn(
+        "fixed inset-y-0 left-0 w-80 bg-card border-r border-white/10 z-50 transform transition-transform duration-300 ease-in-out flex flex-col shadow-2xl",
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="p-4 border-b border-white/10 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <span className="text-primary">Tube</span>board
+          </h2>
+          <button 
+            onClick={onClose}
+            className="p-2 text-text-muted hover:text-white transition-colors"
+            aria-label="Close Sidebar"
+          >
+            <X size={20} aria-hidden="true" />
+          </button>
         </div>
 
-        <div>
-          <div className="flex items-center justify-between px-2 mb-3">
-            <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider">Projects</h3>
-          </div>
-          
-          <div className="space-y-1">
-            {projects.length === 0 ? (
-              <div className="px-3 py-4 text-center border border-dashed border-white/10 rounded-xl">
-                <p className="text-xs text-text-muted">No projects yet</p>
-              </div>
-            ) : (
-              projects.map((project) => (
-                <div key={project.id} className="group relative flex items-center">
-                  <Link
-                    to={`/project/${project.id}`}
-                    onClick={() => setCurrentProject(project)}
+        <div className="flex-1 overflow-y-auto p-4 space-y-8">
+          {/* Navigation */}
+          <nav className="space-y-2">
+            <Link 
+              to="/" 
+              onClick={onClose}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-text-muted hover:text-white hover:bg-white/5 transition-colors"
+            >
+              <Home size={18} aria-hidden="true" />
+              <span className="font-medium">Home</span>
+            </Link>
+            <Link 
+              to="/costs" 
+              onClick={onClose}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-text-muted hover:text-white hover:bg-white/5 transition-colors"
+            >
+              <DollarSign size={18} aria-hidden="true" />
+              <span className="font-medium">Cost Breakdown</span>
+            </Link>
+          </nav>
+
+          {/* Projects */}
+          <div>
+            <div className="flex items-center justify-between mb-4 px-2">
+              <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider">Projects</h3>
+              <button 
+                onClick={() => {
+                  // Trigger create modal logic (needs to be lifted or handled via context/global event)
+                  // For now, we might need to pass a prop or use a global modal manager
+                  // But since CreateProjectModal is in Layout, we can't easily trigger it from here without prop drilling
+                  // Let's assume we can navigate to home and open it, or just use a simple prompt for now
+                  // Actually, the user asked for the sidebar to be a modal dialog.
+                  // Let's just use a simple prompt here or navigate to home?
+                  // The original app had a create button in sidebar.
+                  // We'll reimplement a simple create flow here or emit an event.
+                  const url = prompt("Enter YouTube URL:");
+                  if (url) {
+                    const name = prompt("Enter Project Name:") || "Untitled Project";
+                    createProject(name, url);
+                  }
+                }}
+                className="p-1 text-primary hover:bg-primary/10 rounded transition-colors"
+                aria-label="New Project"
+              >
+                <Plus size={16} aria-hidden="true" />
+              </button>
+            </div>
+            <div className="space-y-1">
+              {projects.map((project) => (
+                <div key={project.id} className="group flex items-center gap-2">
+                  <button
+                    onClick={() => handleProjectClick(project)}
                     className={cn(
-                      "flex-1 flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-colors truncate pr-8",
-                      location.pathname === `/project/${project.id}` 
-                        ? "bg-secondary/20 text-secondary" 
+                      "flex-1 flex items-center gap-3 px-4 py-2 rounded-xl text-sm transition-colors text-left truncate",
+                      currentProject?.id === project.id 
+                        ? "bg-white/10 text-white font-medium" 
                         : "text-text-muted hover:text-white hover:bg-white/5"
                     )}
                   >
-                    <Folder size={16} className={cn(
-                      location.pathname === `/project/${project.id}` ? "text-secondary" : "text-text-muted"
-                    )} />
+                    <FolderOpen size={16} className={cn(
+                      "shrink-0", 
+                      currentProject?.id === project.id ? "text-primary" : "text-text-muted"
+                    )} aria-hidden="true" />
                     <span className="truncate">{project.name}</span>
-                  </Link>
+                  </button>
                   <button
                     onClick={(e) => {
-                      e.preventDefault();
                       e.stopPropagation();
                       if (confirm('Delete this project?')) deleteProject(project.id);
                     }}
-                    className="absolute right-2 opacity-0 group-hover:opacity-100 p-1.5 text-text-muted hover:text-red-500 transition-all"
-                    aria-label={`Delete project ${project.name}`}
+                    className="p-2 text-text-muted hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label={`Delete ${project.name}`}
                   >
                     <Trash2 size={14} aria-hidden="true" />
                   </button>
                 </div>
-              ))
-            )}
+              ))}
+            </div>
+          </div>
+
+          {/* Settings Section */}
+          <div className="space-y-4 pt-4 border-t border-white/10">
+            <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider px-2 flex items-center gap-2">
+              <Settings size={14} /> Settings
+            </h3>
+            
+            <div className="space-y-4 px-2">
+              {/* Model Selection */}
+              <div className="space-y-2">
+                <label className="text-xs text-text-muted">Gemini Model</label>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary/50"
+                >
+                  {Object.values(GEMINI_MODELS).map((model) => (
+                    <option key={model} value={model} className="bg-card text-white">
+                      {Object.entries(MODEL_LABELS).find(([k, v]) => k === model)?.[1] || model}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Exchange Rate */}
+              <div className="space-y-2">
+                <label className="text-xs text-text-muted">Exchange Rate (1 USD = ₹)</label>
+                <input
+                  type="number"
+                  value={exchangeRate}
+                  onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 0)}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary/50"
+                />
+              </div>
+
+              {/* TTS Settings */}
+              <div className="space-y-3">
+                <label className="text-xs text-text-muted flex items-center gap-2">
+                  <Volume2 size={14} /> Text-to-Speech
+                </label>
+                
+                <select
+                  value={ttsSettings.voiceURI || ''}
+                  onChange={(e) => setTtsSettings({ ...ttsSettings, voiceURI: e.target.value })}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary/50"
+                >
+                  <option value="">Default Voice</option>
+                  {voices.map((voice) => (
+                    <option key={voice.voiceURI} value={voice.voiceURI}>
+                      {voice.name} ({voice.lang})
+                    </option>
+                  ))}
+                </select>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-text-muted">Rate: {ttsSettings.rate}</label>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="2"
+                      step="0.1"
+                      value={ttsSettings.rate}
+                      onChange={(e) => setTtsSettings({ ...ttsSettings, rate: parseFloat(e.target.value) })}
+                      className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-text-muted">Pitch: {ttsSettings.pitch}</label>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="2"
+                      step="0.1"
+                      value={ttsSettings.pitch}
+                      onChange={(e) => setTtsSettings({ ...ttsSettings, pitch: parseFloat(e.target.value) })}
+                      className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-primary"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-
-      <div className="p-4 border-t border-white/5">
-        {/* User badge removed as requested */}
-      </div>
-    </aside>
+    </>
   );
 }

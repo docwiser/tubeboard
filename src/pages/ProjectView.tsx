@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { ChatInterface } from '../components/ChatInterface';
@@ -7,22 +7,94 @@ import { ResultDisplay } from '../components/ResultDisplay';
 import { extractYoutubeId } from '../lib/utils';
 import { MessageSquare, Zap, Layers, MoreVertical, Copy, FileJson, Download } from 'lucide-react';
 import { cn } from '../lib/utils';
+import YouTube, { YouTubeProps, YouTubePlayer } from 'react-youtube';
 
 export function ProjectView() {
   const { id } = useParams<{ id: string }>();
-  const { projects } = useApp();
+  const { projects, ttsSettings } = useApp();
   
   if (!id) return <Navigate to="/" />;
   
   const project = projects.find((p) => p.id === id);
   const [activeTab, setActiveTab] = useState<'generate' | 'chat'>('generate');
   const [showMenu, setShowMenu] = useState(false);
+  const playerRef = useRef<YouTubePlayer | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  // Scene Description TTS Logic
+  useEffect(() => {
+    if (!playerRef.current || !project) return;
+
+    const checkTime = setInterval(async () => {
+      if (!playerRef.current || !isPlaying) return;
+      
+      const currentTime = await playerRef.current.getCurrentTime();
+      
+      // Find active scene description
+      const sceneGen = project.generations.find(g => g.type === 'SCENE_DESC');
+      if (sceneGen && Array.isArray(sceneGen.content)) {
+        const currentScene = sceneGen.content.find((scene: any) => {
+          // Assuming scene has startTime/timestamp in seconds or "MM:SS"
+          // We need to parse it. Let's assume content structure from prompt.
+          // If prompt asks for JSON with startTime, we parse it.
+          // For now, let's assume the content has a 'timestamp' field which is a string "MM:SS" or number
+          
+          let sceneTime = -1;
+          if (typeof scene.timestamp === 'string') {
+             const parts = scene.timestamp.split(':').map(Number);
+             if (parts.length === 2) sceneTime = parts[0] * 60 + parts[1];
+             else if (parts.length === 3) sceneTime = parts[0] * 3600 + parts[1] * 60 + parts[2];
+          } else if (typeof scene.timestamp === 'number') {
+            sceneTime = scene.timestamp;
+          }
+
+          // Check if we just hit this timestamp (within 1s margin)
+          // We need a state to track played scenes to avoid loop, but for now simple check
+          return Math.abs(currentTime - sceneTime) < 1;
+        });
+
+        if (currentScene && !window.speechSynthesis.speaking) {
+           playerRef.current.pauseVideo();
+           const utterance = new SpeechSynthesisUtterance(currentScene.description || currentScene.text);
+           if (ttsSettings.voiceURI) {
+             const voice = window.speechSynthesis.getVoices().find(v => v.voiceURI === ttsSettings.voiceURI);
+             if (voice) utterance.voice = voice;
+           }
+           utterance.rate = ttsSettings.rate;
+           utterance.pitch = ttsSettings.pitch;
+           utterance.volume = ttsSettings.volume;
+           
+           utterance.onend = () => {
+             playerRef.current.playVideo();
+           };
+           
+           window.speechSynthesis.speak(utterance);
+        }
+      }
+    }, 1000);
+
+    return () => clearInterval(checkTime);
+  }, [project, isPlaying, ttsSettings]);
 
   if (!project) {
     return <Navigate to="/" />;
   }
 
   const videoId = extractYoutubeId(project.videoUrl);
+
+  const onPlayerReady: YouTubeProps['onReady'] = (event) => {
+    playerRef.current = event.target;
+  };
+
+  const onPlayerStateChange: YouTubeProps['onStateChange'] = (event) => {
+    setIsPlaying(event.data === 1); // 1 is playing
+  };
+
+  const seekTo = (seconds: number) => {
+    if (playerRef.current) {
+      playerRef.current.seekTo(seconds, true);
+    }
+  };
 
   const handleCopyMessages = () => {
     const text = project.chatHistory.map(m => `${m.role.toUpperCase()}: ${m.text}`).join('\n\n');
@@ -79,12 +151,19 @@ export function ProjectView() {
         <div className="lg:col-span-2 flex flex-col gap-6 h-full overflow-hidden">
           <div className="aspect-video bg-black rounded-2xl overflow-hidden border border-white/10 shadow-2xl shrink-0">
             {videoId ? (
-              <iframe
-                src={`https://www.youtube.com/embed/${videoId}`}
-                title="YouTube video player"
+              <YouTube
+                videoId={videoId}
                 className="w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
+                iframeClassName="w-full h-full"
+                onReady={onPlayerReady}
+                onStateChange={onPlayerStateChange}
+                opts={{
+                  playerVars: {
+                    autoplay: 0,
+                    modestbranding: 1,
+                    rel: 0,
+                  },
+                }}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-text-muted">
@@ -136,7 +215,7 @@ export function ProjectView() {
               hidden={activeTab !== 'generate'}
               className="h-full"
             >
-              {activeTab === 'generate' && <GeneratorInterface projectId={project.id} videoUrl={project.videoUrl} />}
+              {activeTab === 'generate' && <GeneratorInterface projectId={project.id} videoUrl={project.videoUrl} onSeek={seekTo} />}
             </div>
             <div
               role="tabpanel"
@@ -145,7 +224,7 @@ export function ProjectView() {
               hidden={activeTab !== 'chat'}
               className="h-full"
             >
-              {activeTab === 'chat' && <ChatInterface projectId={project.id} videoUrl={project.videoUrl} />}
+              {activeTab === 'chat' && <ChatInterface projectId={project.id} videoUrl={project.videoUrl} onSeek={seekTo} />}
             </div>
           </div>
         </div>
@@ -168,7 +247,7 @@ export function ProjectView() {
               <ul className="space-y-4">
                 {project.generations.map((gen) => (
                   <li key={gen.id}>
-                    <ResultDisplay generation={gen} />
+                    <ResultDisplay generation={gen} onSeek={seekTo} />
                   </li>
                 ))}
               </ul>

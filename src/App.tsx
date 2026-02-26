@@ -14,7 +14,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/project/:id" element={<ProjectView />} />
-            <Route path="/cost" element={<CostPage />} />
+            <Route path="/costs" element={<CostPage />} />
           </Routes>
         </Layout>
       </BrowserRouter>

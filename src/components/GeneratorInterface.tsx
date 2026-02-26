@@ -14,9 +14,10 @@ interface CustomizationParams {
   difficulty?: string;
   detailLevel?: string;
   includeTimestamps?: boolean;
+  interval?: number;
 }
 
-export function GeneratorInterface({ projectId, videoUrl }: GeneratorInterfaceProps) {
+export function GeneratorInterface({ projectId, videoUrl, onSeek }: { projectId: string; videoUrl: string; onSeek?: (time: number) => void }) {
   const { addGeneration, apiKey, selectedModel } = useApp();
   const [isGenerating, setIsGenerating] = useState<GenerationType | null>(null);
   const [customPrompt, setCustomPrompt] = useState('');
@@ -28,6 +29,7 @@ export function GeneratorInterface({ projectId, videoUrl }: GeneratorInterfacePr
     difficulty: 'medium',
     detailLevel: 'standard',
     includeTimestamps: true,
+    interval: 30,
   });
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -68,7 +70,7 @@ export function GeneratorInterface({ projectId, videoUrl }: GeneratorInterfacePr
           schema = SCHEMAS.TRANSCRIPTION_ADVANCED;
           break;
         case 'SCENE_DESC':
-          prompt = `Analyze the video and provide detailed scene descriptions with timestamps, key objects, and mood. Detail level: ${params.detailLevel}.`;
+          prompt = `Analyze the video and provide detailed scene descriptions at ${params.interval} seconds interval up to the video ends. Include timestamps, key objects, and mood. Detail level: ${params.detailLevel}.`;
           schema = SCHEMAS.SCENE_DESCRIPTION;
           break;
         case 'QUIZ':
@@ -239,17 +241,31 @@ export function GeneratorInterface({ projectId, videoUrl }: GeneratorInterfacePr
             )}
 
             {activeModal === 'SCENE_DESC' && (
-              <div>
-                <label className="block text-sm font-medium text-text-muted mb-2">Detail Level</label>
-                <select
-                  value={params.detailLevel}
-                  onChange={(e) => setParams({ ...params, detailLevel: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
-                >
-                  <option value="brief" className="bg-card">Brief</option>
-                  <option value="standard" className="bg-card">Standard</option>
-                  <option value="detailed" className="bg-card">Detailed</option>
-                </select>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-text-muted mb-2">Detail Level</label>
+                  <select
+                    value={params.detailLevel}
+                    onChange={(e) => setParams({ ...params, detailLevel: e.target.value })}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  >
+                    <option value="brief" className="bg-card">Brief</option>
+                    <option value="standard" className="bg-card">Standard</option>
+                    <option value="detailed" className="bg-card">Detailed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-text-muted mb-2">Interval (seconds)</label>
+                  <input
+                    type="number"
+                    min="5"
+                    step="5"
+                    value={params.interval}
+                    onChange={(e) => setParams({ ...params, interval: parseInt(e.target.value) })}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                  <p className="text-xs text-text-muted mt-1">Generate description every {params.interval} seconds.</p>
+                </div>
               </div>
             )}
 

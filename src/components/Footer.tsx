@@ -2,8 +2,8 @@ import React from 'react';
 
 export function Footer() {
   return (
-    <footer className="py-8 border-t border-white/5 mt-auto ml-64 bg-bg">
-      <div className="container mx-auto px-8 flex flex-col md:flex-row items-center justify-between gap-4">
+    <footer className="py-8 border-t border-white/5 mt-auto bg-bg">
+      <div className="container mx-auto px-4 md:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
         <p className="text-sm text-text-muted">
           &copy; {new Date().getFullYear()} Tubeboard. All rights reserved.
         </p>
